@@ -17,9 +17,9 @@ public class Server implements Runnable {
         try {
             ServerSocket server = new ServerSocket(9999);
             Socket client = server.accept();
-            connectionHandler handler = new ConnectionHandler(client);
-            
-            connections.add(handler)
+            ConnectionHandler handler = new ConnectionHandler(client);
+
+            connections.add(handler);
         } 
         catch (IOException e){
 
@@ -36,7 +36,7 @@ public class Server implements Runnable {
         private PrintWriter out;
         private String usuario;
 
-        public connectionHandler(Socket client) {
+        public void connectionHandler(Socket client) {
             this.client = client;
         }
     
