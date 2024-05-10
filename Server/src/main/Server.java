@@ -7,14 +7,19 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+
 
 public class Server implements Runnable {
 
-    private ArrayList<ConnectionHandler> connections;
+    private ArrayList<connectionHandler> connections;
     private ServerSocket server;
-    private done;
+    private boolean done;
+    private ExecutorService pool;
 
-    public server() {
+    public void server() {
         connections = new ArrayList<>();
         done = false;
     }
@@ -23,15 +28,16 @@ public class Server implements Runnable {
 
         try {
             server = new ServerSocket(9999);
+            pool = Executors.newCachedThreadPool();
             while (!done) {
                 Socket client = server.accept();
-                ConnectionHandler handler = new ConnectionHandler(client);
+                connectionHandler handler = new connectionHandler(client);
                 connections.add(handler);
+                pool.execute(handler);;
             }
         } 
         catch (IOException e){
-
-            e.printStackTrace();
+            shutdown();
         }
     }
 
@@ -45,7 +51,7 @@ public class Server implements Runnable {
 
     public void shutdown(){
         try {
-            done = true
+            done = true;
             if (!server.isClosed()) {
                 server.close();
             }
@@ -56,17 +62,17 @@ public class Server implements Runnable {
 
         }
     }
-    /**
-     * connectionHandler implements Run
-     */
-    public class ConnectionHandler implements Runnable {
+
+
+
+    public class connectionHandler implements Runnable {
 
         private Socket client;
         private BufferedReader in;
         private PrintWriter out;
         private String usuario;
 
-        public void connectionHandler(Socket client) {
+        public connectionHandler(Socket client) {
             this.client = client;
         }
     
@@ -85,26 +91,45 @@ public class Server implements Runnable {
                         String[] messageSplit = message.split("", 2);
                         if (messageSplit.length == 2){
                             broadcast(usuario + "alterou seu nome para:" + messageSplit[1]);
-                            System.out.println(usuario + "alterou seu nome para:" + messageSplit[1])
-                            usuario = messageSplit[1]
+                            System.out.println(usuario + "alterou seu nome para:" + messageSplit[1]);
+                            usuario = messageSplit[1];
                         } else {
-                            out.println("Nome de usuario nao solicitado")
+                            out.println("Nome de usuario nao solicitado");
                         }
                     } else if (message.startsWith("/quit")) {
-
+                        broadcast(usuario + " Saiu do chat");
+                        shutdown();
                     }else {
-                        broadcast(usuario + ":  " + message)
+                        broadcast(usuario + ":  " + message);
                     }
                 } 
             } 
             catch (IOException e){
-    
-                e.printStackTrace();
+                shutdown();
             }
         }
 
         public void sendMessage(String message) {
             out.println(message);
         }
+
+        public void shutdown() {
+            try {
+                in.close();
+                out.close();
+                if (!client.isClosed()) {
+                    client.close();
+                } 
+            } catch (IOException e) {
+                //ignore
+            }
+        }
+    }
+
+
+
+    public static void main(String[] args) {
+        Server server = new Server();
+        server.run();
     }
 }
